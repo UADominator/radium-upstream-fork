@@ -54,19 +54,22 @@ public abstract class EntityTrackingSectionMixin<T extends EntityLike> implement
     public void trackEntityMovement(int notificationMask, long time) {
         long[] lastEntityMovementByType = this.lastEntityMovementByType;
         int size = lastEntityMovementByType.length;
-        int mask;
-        for (int entityClassIndex = Integer.numberOfTrailingZeros(notificationMask); entityClassIndex < size; ) {
-            lastEntityMovementByType[entityClassIndex] = time;
+        int entityClassIndex = Integer.numberOfTrailingZeros(notificationMask);
 
+        while (entityClassIndex < size) {
+            lastEntityMovementByType[entityClassIndex] = time;
             ArrayList<SectionedEntityMovementTracker<?, ?>> entityMovementListeners = this.entityMovementListenersByType[entityClassIndex];
-            if (entityMovementListeners != null) {
-                for (int listIndex = entityMovementListeners.size() - 1; listIndex >= 0; listIndex--) {
-                    SectionedEntityMovementTracker<?, ?> sectionedEntityMovementTracker = entityMovementListeners.remove(listIndex);
-                    sectionedEntityMovementTracker.emitEntityMovement(notificationMask, this);
+
+            if (entityMovementListeners != null && !entityMovementListeners.isEmpty()) {
+                ArrayList<SectionedEntityMovementTracker<?, ?>> listenersCopy = new ArrayList<>(entityMovementListeners);
+
+                for (SectionedEntityMovementTracker<?, ?> tracker : listenersCopy) {
+                    tracker.emitEntityMovement(notificationMask, this);
                 }
+                entityMovementListeners.clear();
             }
 
-            mask = 0xffff_fffe << entityClassIndex;
+            int mask = -2 << entityClassIndex;
             entityClassIndex = Integer.numberOfTrailingZeros(notificationMask & mask);
         }
     }
